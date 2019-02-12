@@ -6,8 +6,10 @@
 
 A Keras implementation of YOLOv3 (Tensorflow backend) inspired by [allanzelener/YAD2K](https://github.com/allanzelener/YAD2K).
 
-
 ---
+
+## TL;DR
+0. Use [this docker image](https://hub.docker.com/r/ricardodeazambuja/tensorflow_gpu_py3_opencv_dlib_jupyter), clone the repo and go straight to the notebooks [Convert Models 2 Keras.ipynb](https://github.com/ricardodeazambuja/keras-yolo3/blob/master/Convert%20Models%202%20Keras.ipynb) and [Test YOLO-Keras.ipynb](https://github.com/ricardodeazambuja/keras-yolo3/blob/master/Test%20YOLO-Keras.ipynb) ;)
 
 ## Quick Start
 
