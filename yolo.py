@@ -21,6 +21,7 @@ from tensorflow.keras.utils import multi_gpu_model
 
 class YOLO(object):
     _defaults = {
+        "base_path": '',
         "model_path": 'model_data/yolo.h5',
         "anchors_path": 'model_data/yolo_anchors.txt',
         "classes_path": 'model_data/coco_classes.txt',
@@ -46,21 +47,21 @@ class YOLO(object):
         self.boxes, self.scores, self.classes = self.generate()
 
     def _get_class(self):
-        classes_path = os.path.expanduser(self.classes_path)
+        classes_path = os.path.expanduser(self.base_path+self.classes_path)
         with open(classes_path) as f:
             class_names = f.readlines()
         class_names = [c.strip() for c in class_names]
         return class_names
 
     def _get_anchors(self):
-        anchors_path = os.path.expanduser(self.anchors_path)
+        anchors_path = os.path.expanduser(self.base_path+self.anchors_path)
         with open(anchors_path) as f:
             anchors = f.readline()
         anchors = [float(x) for x in anchors.split(',')]
         return np.array(anchors).reshape(-1, 2)
 
     def generate(self):
-        model_path = os.path.expanduser(self.model_path)
+        model_path = os.path.expanduser(self.base_path+self.model_path)
         assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
 
         # Load model, or construct model and load weights.
@@ -72,7 +73,7 @@ class YOLO(object):
         except:
             self.yolo_model = tiny_yolo_body(Input(shape=(None,None,3)), num_anchors//2, num_classes) \
                 if is_tiny_version else yolo_body(Input(shape=(None,None,3)), num_anchors//3, num_classes)
-            self.yolo_model.load_weights(self.model_path) # make sure model, anchors and classes match
+            self.yolo_model.load_weights(model_path) # make sure model, anchors and classes match
         else:
             assert self.yolo_model.layers[-1].output_shape[-1] == \
                 num_anchors/len(self.yolo_model.output) * (num_classes + 5), \
@@ -100,7 +101,7 @@ class YOLO(object):
                 score_threshold=self.score, iou_threshold=self.iou)
         return boxes, scores, classes
 
-    def detect_image(self, image):
+    def detect_image(self, image, verbose=True, text_only=False):
         start = timer()
 
         if self.model_image_size != (None, None):
@@ -113,9 +114,13 @@ class YOLO(object):
             boxed_image = letterbox_image(image, new_image_size)
         image_data = np.array(boxed_image, dtype='float32')
 
-        print(image_data.shape)
+        if verbose: print(image_data.shape)
         image_data /= 255.
-        image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
+        # image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
+        image_data = image_data.reshape((image_data.shape[0],
+                                         image_data.shape[1],
+                                         image_data.shape[2], 
+                                         1))  # Add batch dimension (slightly faster).
 
         out_boxes, out_scores, out_classes = self.sess.run(
             [self.boxes, self.scores, self.classes],
@@ -125,9 +130,8 @@ class YOLO(object):
                 K.learning_phase(): 0
             })
 
-        print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
-
-        font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
+        if verbose: print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
+        font = ImageFont.truetype(font=self.base_path+'font/FiraMono-Medium.otf',
                     size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
         thickness = (image.size[0] + image.size[1]) // 300
 
@@ -145,7 +149,7 @@ class YOLO(object):
             left = max(0, np.floor(left + 0.5).astype('int32'))
             bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
             right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
-            print(label, (left, top), (right, bottom))
+            if verbose: print(label, (left, top), (right, bottom))
 
             if top - label_size[1] >= 0:
                 text_origin = np.array([left, top - label_size[1]])
@@ -164,8 +168,12 @@ class YOLO(object):
             del draw
 
         end = timer()
-        print(end - start)
-        return image
+        if verbose: print('time elapsed:' + str(end - start))
+        
+        if text_only:
+            return out_boxes, out_scores, out_classes
+        else:
+            return image
 
     def close_session(self):
         self.sess.close()
