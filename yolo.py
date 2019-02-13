@@ -117,10 +117,10 @@ class YOLO(object):
         if verbose: print(image_data.shape)
         image_data /= 255.
         # image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
-        image_data = image_data.reshape((image_data.shape[0],
+        image_data = image_data.reshape((1,
+                                         image_data.shape[0],
                                          image_data.shape[1],
-                                         image_data.shape[2], 
-                                         1))  # Add batch dimension (slightly faster).
+                                         image_data.shape[2]))  # Add batch dimension (slightly faster).
 
         out_boxes, out_scores, out_classes = self.sess.run(
             [self.boxes, self.scores, self.classes],
