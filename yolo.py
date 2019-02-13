@@ -101,8 +101,11 @@ class YOLO(object):
                 score_threshold=self.score, iou_threshold=self.iou)
         return boxes, scores, classes
 
-    def detect_image(self, image, verbose=True, text_only=False):
+    def detect_image(self, image, verbose=True, text_only=False, image_copy = True):
         start = timer()
+
+        if image_copy:
+            image = image.copy() # avoids drawing on top of the original image
 
         if self.model_image_size != (None, None):
             assert self.model_image_size[0]%32 == 0, 'Multiples of 32 required'
@@ -171,6 +174,7 @@ class YOLO(object):
         if verbose: print('time elapsed:' + str(end - start))
         
         if text_only:
+            del image # trying to help the garbage collector...
             return out_boxes, out_scores, out_classes
         else:
             return image
