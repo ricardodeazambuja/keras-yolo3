@@ -101,7 +101,7 @@ class YOLO(object):
                 score_threshold=self.score, iou_threshold=self.iou)
         return boxes, scores, classes
 
-    def detect_image(self, image, verbose=True, text_only=False, image_copy = True):
+    def detect_image(self, image, verbose=True, text_only=False, image_copy = True, min_threshold=0.0):
         start = timer()
 
         if image_copy:
@@ -132,6 +132,19 @@ class YOLO(object):
                 self.input_image_shape: [image.size[1], image.size[0]],
                 K.learning_phase(): 0
             })
+
+        if min_threshold > 0.0:
+            indices_below_thrs = np.arange(len(out_scores))[(out_scores<min_threshold)]
+            out_boxes = np.delete(out_boxes,
+                                  indices_below_thrs,
+                                  axis=0)
+
+            out_classes = np.delete(out_classes,
+                                    indices_below_thrs,
+                                    axis=0)
+
+            out_scores = np.delete(out_scores,
+                                   indices_below_thrs)
 
         if verbose: print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
         font = ImageFont.truetype(font=self.base_path+'font/FiraMono-Medium.otf',
