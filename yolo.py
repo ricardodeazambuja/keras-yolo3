@@ -101,7 +101,7 @@ class YOLO(object):
                 score_threshold=self.score, iou_threshold=self.iou)
         return boxes, scores, classes
 
-    def detect_image(self, image, verbose=True, text_only=False, image_copy = True, min_threshold=0.0):
+    def detect_image(self, image, verbose=True, text_only=False, image_copy = True, min_threshold=0.0, visualization=[]):
         start = timer()
 
         if image_copy:
@@ -125,13 +125,16 @@ class YOLO(object):
                                          image_data.shape[1],
                                          image_data.shape[2]))  # Add batch dimension (slightly faster).
 
-        out_boxes, out_scores, out_classes = self.sess.run(
-            [self.boxes, self.scores, self.classes],
-            feed_dict={
-                self.yolo_model.input: image_data,
-                self.input_image_shape: [image.size[1], image.size[0]],
-                K.learning_phase(): 0
-            })
+        if len(visualization)==0:
+            out_boxes, out_scores, out_classes = self.sess.run(
+                [self.boxes, self.scores, self.classes],
+                feed_dict={
+                    self.yolo_model.input: image_data,
+                    self.input_image_shape: [image.size[1], image.size[0]],
+                    K.learning_phase(): 0
+                })
+        else:
+            out_boxes, out_scores, out_classes = visualization
 
         if min_threshold > 0.0:
             indices_below_thrs = np.arange(len(out_scores))[(out_scores<min_threshold)]
@@ -191,6 +194,7 @@ class YOLO(object):
             return out_boxes, out_scores, out_classes
         else:
             return image
+
 
     def close_session(self):
         self.sess.close()
