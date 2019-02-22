@@ -19,6 +19,51 @@ from yolo3.utils import letterbox_image
 import os
 from tensorflow.keras.utils import multi_gpu_model
 
+
+def draw_boxes(image, yolo_output, image_copy = True, min_threshold=0.0):
+
+    if image_copy:
+        image = image.copy() # avoids drawing on top of the original image    
+
+    out_boxes, out_scores, out_classes = yolo_output
+
+    if min_threshold > 0.0:
+        indices_below_thrs = np.arange(len(out_scores))[(out_scores<min_threshold)]
+        out_boxes = np.delete(out_boxes,
+                                indices_below_thrs,
+                                axis=0)
+
+        out_classes = np.delete(out_classes,
+                                indices_below_thrs,
+                                axis=0)
+
+        out_scores = np.delete(out_scores,
+                                indices_below_thrs)
+
+    thickness = (image.size[0] + image.size[1]) // 300
+
+    for i, c in reversed(list(enumerate(out_classes))):
+        predicted_class = c
+        box = out_boxes[i]
+        score = out_scores[i]
+
+        draw = ImageDraw.Draw(image)
+
+        top, left, bottom, right = box
+        top = max(0, np.floor(top + 0.5).astype('int32'))
+        left = max(0, np.floor(left + 0.5).astype('int32'))
+        bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
+        right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
+
+        # My kingdom for a good redistributable image drawing library.
+        for i in range(thickness):
+            draw.rectangle(
+                [left + i, top + i, right - i, bottom - i])
+        del draw
+
+    return image
+
+
 class YOLO(object):
     _defaults = {
         "base_path": '',
