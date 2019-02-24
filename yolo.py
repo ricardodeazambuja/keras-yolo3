@@ -20,7 +20,8 @@ import os
 from tensorflow.keras.utils import multi_gpu_model
 
 
-def draw_boxes(image, yolo_output, image_copy = True, min_threshold=0.0):
+def draw_boxes(image, yolo_output, image_copy = True, 
+               min_threshold=0.0, color=(255,255,255)):
 
     if image_copy:
         image = image.copy() # avoids drawing on top of the original image    
@@ -47,6 +48,7 @@ def draw_boxes(image, yolo_output, image_copy = True, min_threshold=0.0):
         box = out_boxes[i]
         score = out_scores[i]
 
+        label = '{} {:.2f}'.format(predicted_class, score)
         draw = ImageDraw.Draw(image)
 
         top, left, bottom, right = box
@@ -55,10 +57,16 @@ def draw_boxes(image, yolo_output, image_copy = True, min_threshold=0.0):
         bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
         right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
 
+
+        text_origin = [left + 5, top + 5]
+
+
         # My kingdom for a good redistributable image drawing library.
         for i in range(thickness):
             draw.rectangle(
-                [left + i, top + i, right - i, bottom - i])
+                [left + i, top + i, right - i, bottom - i],
+                outline=color)
+        draw.text(text_origin, label, fill=color)
         del draw
 
     return image
